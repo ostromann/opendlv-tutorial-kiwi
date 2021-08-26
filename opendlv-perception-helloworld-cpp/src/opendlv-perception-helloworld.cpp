@@ -26,7 +26,7 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
-#include <math.h> 
+#include <math.h>
 #include <chrono>
 
 
@@ -165,10 +165,10 @@ int32_t main(int32_t argc, char **argv) {
         const uint32_t WIDTH{static_cast<uint32_t>(std::stoi(commandlineArguments["width"]))};
         const uint32_t HEIGHT{static_cast<uint32_t>(std::stoi(commandlineArguments["height"]))};
         const bool VERBOSE{commandlineArguments.count("verbose") != 0};
-        
-        const uint32_t CROP_WIDTH = 600;
-        const uint32_t CROP_HEIGHT = 210;
-        const uint32_t X_DISTANCE = 150;
+
+        const uint32_t CROP_WIDTH{static_cast<uint32_t>(std::stoi(commandlineArguments["crop_width"]))};
+        const uint32_t CROP_HEIGHT{static_cast<uint32_t>(std::stoi(commandlineArguments["crop_height"]))};
+        const uint32_t X_DISTANCE{static_cast<uint32_t>(std::stoi(commandlineArguments["x_distance"]))};
 
         cv::Scalar hsvLowYellow = toScalar(tokenize(commandlineArguments["ylow"]));
         cv::Scalar hsvHiYellow = toScalar(tokenize(commandlineArguments["yhigh"]));
@@ -176,6 +176,9 @@ int32_t main(int32_t argc, char **argv) {
         cv::Scalar hsvHiBlue = toScalar(tokenize(commandlineArguments["bhigh"]));
         const uint32_t NERODE{static_cast<uint32_t>(std::stoi(commandlineArguments["nerode"]))};
         const uint32_t NDILATE{static_cast<uint32_t>(std::stoi(commandlineArguments["ndilate"]))};
+        const uint32_t MAX_CIRCLE_SIZE{static_cast<uint32_t>(std::stoi(commandlineArguments["max_circle_size"]))};
+        const uint32_t MIN_CIRCLE_SIZE{static_cast<uint32_t>(std::stoi(commandlineArguments["min_circle_size"]))};
+
 
         // For monitoring execution time
         using std::chrono::high_resolution_clock;
@@ -241,13 +244,19 @@ int32_t main(int32_t argc, char **argv) {
                 // Crop Image //TODO: make adaptive, use CROP_WIDTH and CROP_HEIGHT
                 cv::Rect myROI(10, 10, 100, 100);
                 cv::Mat croppedImage = img(myROI);
-	            cv::Mat crop_img = img(cv::Range(300,720), cv::Range(40, 1240));
 
-                // Scale image
-                cv::resize(crop_img, crop_img, cv::Size(CROP_WIDTH,CROP_HEIGHT), cv::INTER_LINEAR);
+                uint32_t break_width{(WIDTH-CROP_WIDTH)/2};
+	              cv::Mat crop_img = img(cv::Range(HEIGHT-CROP_HEIGHT,HEIGHT), cv::Range(break_width, WIDTH-break_width));
+
+                int cropped_width{crop_img.cols};
+                int cropped_height{crop_img.rows};
+                // Scale image to half resolution
+                cv::resize(crop_img, crop_img, cv::Size(cropped_width/2, cropped_height/2), cv::INTER_LINEAR);
 
                 // Drawing an ellipse over vehicle parts visible in camera feed
-                cv::ellipse(crop_img, cv::Point(300, CROP_HEIGHT), cv::Size(280, 55), 0, 0, 360, cv::Scalar(0, 255, 0),-1, cv::LINE_AA);
+                cv::ellipse(crop_img, cv::Point(crop_img.cols/2, crop_img.rows),
+                  cv::Size(crop_img.cols*4/10, crop_img.rows*2/5), 0, 0, 360,
+                  cv::Scalar(0, 0, 0),-1, cv::LINE_AA);
 
 
                 // Convert to HSV
@@ -339,11 +348,11 @@ int32_t main(int32_t argc, char **argv) {
 
                 // Calculate Angle
                 // midpoint.x corresponds to y-distance in local frame!!!
-                
+
                 float angle = atan(ij2xy(midpoint).x/X_DISTANCE);
                 std::string str(std::to_string(angle));
                 cv::putText(crop_img,str,cv::Point(CROP_WIDTH/2,CROP_HEIGHT-X_DISTANCE),cv::FONT_HERSHEY_DUPLEX,1,cv::Scalar(0,0,255),2,false);
-               
+
                 cv::line(crop_img, cv::Point2d(300, 210), midpoint, cv::Scalar(0, 0, 255), 5);
 
 
