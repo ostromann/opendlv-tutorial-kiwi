@@ -16,6 +16,7 @@
  */
 
 #include "behavior.hpp"
+#include <cmath>
 
 Behavior::Behavior() noexcept:
   m_frontUltrasonicReading{},
@@ -99,57 +100,33 @@ void Behavior::step() noexcept
     angleReading = m_angleReading;
   }
 
-  // float frontDistance = frontUltrasonicReading.distance();
-  // float rearDistance = rearUltrasonicReading.distance();
-  // double leftDistance = convertIrVoltageToDistance(leftIrReading.voltage());
-  // double rightDistance = convertIrVoltageToDistance(rightIrReading.voltage());
   float angle = angleReading.angle();
-  // std::cout << "got angle reading: " << angle << std::endl; 
+  angle = angle * -1;
 
   float pedalPosition = 0.2f;
   float groundSteeringAngle = 0.3f;
 
-  // if (frontDistance < 0.3f) {
-  //   pedalPosition = frontDistance;
-  // } else {
-  //   if (rearDistance < 0.3f) {
-  //     pedalPosition = frontDistance;
-  //   }
-  // }
-
-  // if (leftDistance < rightDistance) {
-  //   if (leftDistance < 0.2f) {
-  //     groundSteeringAngle = 0.2f;
-  //     groundSteeringAngle = angle;
-  //   }
-  // } else {
-  //   if (rightDistance < 0.2f) {
-  //     groundSteeringAngle = 0.2f;
-  //     groundSteeringAngle = angle;
-  //   }
-  // }
 
   //---- own control implementation ----
   //TODO: Use as command line arguments
-  float maxSteerLeft = -0.5f;
-  float maxSteerRight = 0.5f;
+  float maxSteeringAngle = 0.5f;
+  float steeringGain = 0.5f;
 
   //TODO: Try to implement a deadzone for small angles
-  if (angle < maxSteerLeft) {
-    groundSteeringAngle = maxSteerLeft;
-  } else if (angle > maxSteerRight) {
-    groundSteeringAngle = maxSteerRight;
-  } else {
-    groundSteeringAngle = angle;
+  groundSteeringAngle = steeringGain * angle;
+  if (groundSteeringAngle > maxSteeringAngle) {
+    groundSteeringAngle = maxSteeringAngle ;
+  } else if (groundSteeringAngle < -maxSteeringAngle) {
+    groundSteeringAngle = -maxSteeringAngle;
   }
 
   //TODO: Use as command line arguments
-  // float pedalPositionDefault = 0.2f;
-  float maxPedalPosition = 0.5f;
+  float defaultPedalPosition = 0.09f;
+  float maxPedalPosition = 0.12f;
 
   // Simple Steering loop
-  // TODO: compute
-  // pedalPosition  = pedalPositionDefault/abs(groundSteeringAngle);
+  pedalPosition = maxPedalPosition - (maxPedalPosition - defaultPedalPosition) * (std::abs(groundSteeringAngle) / maxSteeringAngle);
+
   if (pedalPosition > maxPedalPosition) {
     pedalPosition = maxPedalPosition;
   }
