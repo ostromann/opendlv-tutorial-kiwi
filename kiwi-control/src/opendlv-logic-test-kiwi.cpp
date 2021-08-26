@@ -34,8 +34,12 @@ int32_t main(int32_t argc, char **argv) {
     bool const OVERRIDE{commandlineArguments.count("steer") != 0 || commandlineArguments.count("throttle")};
     float const STEER{commandlineArguments.count("steer") != 0 ? std::stof(commandlineArguments["steer"]) : 0};
     float const THROTTLE{commandlineArguments.count("throttle") != 0 ? std::stof(commandlineArguments["throttle"]) : 0};
+    float const STEERING_GAIN{std::stof(commandlineArguments["steering_gain"])};
+    float const MAX_STEERING_ANGLE{std::stof(commandlineArguments["max_steering_angle"])};
+    float const DEFAULT_PEDAL_POSITION{std::stof(commandlineArguments["default_pedal_position"])};
+    float const MAX_PEDAL_POSITION{std::stof(commandlineArguments["max_pedal_position"])};
 
-    Behavior behavior;
+    Behavior behavior(MAX_STEERING_ANGLE, DEFAULT_PEDAL_POSITION, MAX_PEDAL_POSITION, STEERING_GAIN);
 
     auto onDistanceReading{[&behavior](cluon::data::Envelope &&envelope)
       {

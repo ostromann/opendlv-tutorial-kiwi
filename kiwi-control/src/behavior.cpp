@@ -19,6 +19,10 @@
 #include <cmath>
 
 Behavior::Behavior() noexcept:
+  m_steeringGain(0.5f),
+  m_maxSteeringAngle(0.2f),
+  m_defaultPedalPosition(0.09f),
+  m_maxPedalPosition(0.12f),
   m_frontUltrasonicReading{},
   m_rearUltrasonicReading{},
   m_leftIrReading{},
@@ -34,6 +38,14 @@ Behavior::Behavior() noexcept:
   m_pedalPositionRequestMutex{},
   m_angleReadingMutex{}
 {
+}
+
+Behavior::Behavior(float maxSteer, float defaultPedal, float maxPedal, float steerGain) :
+  Behavior::Behavior() {
+  m_maxSteeringAngle = maxSteer;
+  m_defaultPedalPosition = defaultPedal;
+  m_maxPedalPosition = maxPedal;
+  m_steeringGain = steerGain;
 }
 
 opendlv::proxy::GroundSteeringRequest Behavior::getGroundSteeringAngle() noexcept
@@ -109,26 +121,26 @@ void Behavior::step() noexcept
 
   //---- own control implementation ----
   //TODO: Use as command line arguments
-  float maxSteeringAngle = 0.5f;
-  float steeringGain = 0.5f;
+  // float maxSteeringAngle = 0.5f;
+  // float steeringGain = 0.5f;
 
   //TODO: Try to implement a deadzone for small angles
-  groundSteeringAngle = steeringGain * angle;
-  if (groundSteeringAngle > maxSteeringAngle) {
-    groundSteeringAngle = maxSteeringAngle ;
-  } else if (groundSteeringAngle < -maxSteeringAngle) {
-    groundSteeringAngle = -maxSteeringAngle;
+  groundSteeringAngle = m_steeringGain * angle;
+  if (groundSteeringAngle > m_maxSteeringAngle) {
+    groundSteeringAngle = m_maxSteeringAngle ;
+  } else if (groundSteeringAngle < -m_maxSteeringAngle) {
+    groundSteeringAngle = -m_maxSteeringAngle;
   }
 
   //TODO: Use as command line arguments
-  float defaultPedalPosition = 0.09f;
-  float maxPedalPosition = 0.12f;
+  // float defaultPedalPosition = 0.09f;
+  // float maxPedalPosition = 0.12f;
 
   // Simple Steering loop
-  pedalPosition = maxPedalPosition - (maxPedalPosition - defaultPedalPosition) * (std::abs(groundSteeringAngle) / maxSteeringAngle);
+  pedalPosition = m_maxPedalPosition - (m_maxPedalPosition - m_defaultPedalPosition) * (std::abs(groundSteeringAngle) / m_maxSteeringAngle);
 
-  if (pedalPosition > maxPedalPosition) {
-    pedalPosition = maxPedalPosition;
+  if (pedalPosition > m_maxPedalPosition) {
+    pedalPosition = m_maxPedalPosition;
   }
 
   {

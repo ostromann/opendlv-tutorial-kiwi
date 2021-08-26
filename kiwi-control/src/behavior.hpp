@@ -31,6 +31,7 @@ class Behavior {
 
  public:
   Behavior() noexcept;
+  Behavior(float, float, float, float);
   ~Behavior() = default;
 
  public:
@@ -42,6 +43,10 @@ class Behavior {
   void setRightIr(opendlv::proxy::VoltageReading const &) noexcept;
   void setAngleReading(opendlv::proxy::AngleReading const &) noexcept;
   void step() noexcept;
+  float m_steeringGain;
+  float m_maxSteeringAngle;
+  float m_defaultPedalPosition;
+  float m_maxPedalPosition;
 
  private:
   double convertIrVoltageToDistance(float) const noexcept;
