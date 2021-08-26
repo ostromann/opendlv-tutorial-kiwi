@@ -31,6 +31,9 @@ int32_t main(int32_t argc, char **argv) {
     bool const VERBOSE{commandlineArguments.count("verbose") != 0};
     uint16_t const CID = std::stoi(commandlineArguments["cid"]);
     float const FREQ = std::stof(commandlineArguments["freq"]);
+    bool const OVERRIDE{commandlineArguments.count("steer") != 0 || commandlineArguments.count("throttle")};
+    float const STEER{commandlineArguments.count("steer") != 0 ? std::stof(commandlineArguments["steer"]) : 0};
+    float const THROTTLE{commandlineArguments.count("throttle") != 0 ? std::stof(commandlineArguments["throttle"]) : 0};
 
     Behavior behavior;
 
@@ -69,11 +72,16 @@ int32_t main(int32_t argc, char **argv) {
     od4.dataTrigger(opendlv::proxy::VoltageReading::ID(), onVoltageReading);
     od4.dataTrigger(opendlv::proxy::AngleReading::ID(), onAngleReading);
 
-    auto atFrequency{[&VERBOSE, &behavior, &od4]() -> bool
+    auto atFrequency{[&VERBOSE, &behavior, &od4, &OVERRIDE, &STEER, &THROTTLE]() -> bool
       {
         behavior.step();
         auto groundSteeringAngleRequest = behavior.getGroundSteeringAngle();
         auto pedalPositionRequest = behavior.getPedalPositionRequest();
+
+        if (OVERRIDE) {
+          groundSteeringAngleRequest.groundSteering(STEER);
+          pedalPositionRequest.position(THROTTLE);
+        }
 
         cluon::data::TimeStamp sampleTime = cluon::time::now();
         od4.send(groundSteeringAngleRequest, sampleTime, 0);
