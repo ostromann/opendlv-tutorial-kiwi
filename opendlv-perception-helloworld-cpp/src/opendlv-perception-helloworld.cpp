@@ -242,13 +242,19 @@ int32_t main(int32_t argc, char **argv) {
                 // Crop Image //TODO: make adaptive, use CROP_WIDTH and CROP_HEIGHT
                 cv::Rect myROI(10, 10, 100, 100);
                 cv::Mat croppedImage = img(myROI);
-	            cv::Mat crop_img = img(cv::Range(300,720), cv::Range(40, 1240));
 
-                // Scale image
-                cv::resize(crop_img, crop_img, cv::Size(CROP_WIDTH,CROP_HEIGHT), cv::INTER_LINEAR);
+                uint32_t break_width{(WIDTH-CROP_WIDTH)/2};
+	              cv::Mat crop_img = img(cv::Range(HEIGHT-CROP_HEIGHT,HEIGHT), cv::Range(break_width, WIDTH-break_width));
+
+                int cropped_width{crop_img.cols};
+                int cropped_height{crop_img.rows};
+                // Scale image to half resolution
+                cv::resize(crop_img, crop_img, cv::Size(cropped_width/2, cropped_height/2), cv::INTER_LINEAR);
 
                 // Drawing an ellipse over vehicle parts visible in camera feed
-                cv::ellipse(crop_img, cv::Point(300, CROP_HEIGHT), cv::Size(280, 55), 0, 0, 360, cv::Scalar(0, 255, 0),-1, cv::LINE_AA);
+                cv::ellipse(crop_img, cv::Point(crop_img.cols/2, crop_img.rows),
+                  cv::Size(crop_img.cols*4/10, crop_img.rows*2/5), 0, 0, 360,
+                  cv::Scalar(0, 0, 0),-1, cv::LINE_AA);
 
 
                 // Convert to HSV
