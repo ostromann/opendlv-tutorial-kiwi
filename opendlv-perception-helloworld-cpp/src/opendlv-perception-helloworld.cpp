@@ -26,7 +26,7 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
-#include <math.h> 
+#include <math.h>
 #include <chrono>
 
 
@@ -165,10 +165,10 @@ int32_t main(int32_t argc, char **argv) {
         const uint32_t WIDTH{static_cast<uint32_t>(std::stoi(commandlineArguments["width"]))};
         const uint32_t HEIGHT{static_cast<uint32_t>(std::stoi(commandlineArguments["height"]))};
         const bool VERBOSE{commandlineArguments.count("verbose") != 0};
-        
-        const uint32_t CROP_WIDTH = 600;
-        const uint32_t CROP_HEIGHT = 210;
-        const uint32_t X_DISTANCE = 150;
+
+        const uint32_t CROP_WIDTH{static_cast<uint32_t>(std::stoi(commandlineArguments["crop_width"]))};
+        const uint32_t CROP_HEIGHT{static_cast<uint32_t>(std::stoi(commandlineArguments["crop_height"]))};
+        const uint32_t X_DISTANCE{static_cast<uint32_t>(std::stoi(commandlineArguments["x_distance"]))};
 
         cv::Scalar hsvLowYellow = toScalar(tokenize(commandlineArguments["ylow"]));
         cv::Scalar hsvHiYellow = toScalar(tokenize(commandlineArguments["yhigh"]));
@@ -176,6 +176,7 @@ int32_t main(int32_t argc, char **argv) {
         cv::Scalar hsvHiBlue = toScalar(tokenize(commandlineArguments["bhigh"]));
         const uint32_t NERODE{static_cast<uint32_t>(std::stoi(commandlineArguments["nerode"]))};
         const uint32_t NDILATE{static_cast<uint32_t>(std::stoi(commandlineArguments["ndilate"]))};
+
 
         // For monitoring execution time
         using std::chrono::high_resolution_clock;
@@ -339,11 +340,11 @@ int32_t main(int32_t argc, char **argv) {
 
                 // Calculate Angle
                 // midpoint.x corresponds to y-distance in local frame!!!
-                
+
                 float angle = atan(ij2xy(midpoint).x/X_DISTANCE);
                 std::string str(std::to_string(angle));
                 cv::putText(crop_img,str,cv::Point(CROP_WIDTH/2,CROP_HEIGHT-X_DISTANCE),cv::FONT_HERSHEY_DUPLEX,1,cv::Scalar(0,0,255),2,false);
-               
+
                 cv::line(crop_img, cv::Point2d(300, 210), midpoint, cv::Scalar(0, 0, 255), 5);
 
 
