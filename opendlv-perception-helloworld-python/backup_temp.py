@@ -62,25 +62,6 @@ def onSteer(msg, senderStamp, timeStamps):
         print("steer: " + str(msg.groundSteering))
 
 
-def weigh_centroid_with_history(centroids, MAX_LEN_HISTORY_TO_CONSIDER):
-
-    xs_hist_sum = 0
-    ys_hist_sum = 0
-    len_history_to_consider = len(centroids)
-    if len_history_to_consider > MAX_LEN_HISTORY_TO_CONSIDER:
-        len_history_to_consider = MAX_LEN_HISTORY_TO_CONSIDER
-
-    for i in range(0, len_history_to_consider):  # reverse since readings at end are more important
-        xs_hist_sum += centroids[i][0]
-        ys_hist_sum += centroids[i][1]
-
-    x_average = xs_hist_sum / len_history_to_consider
-    y_average = ys_hist_sum / len_history_to_consider
-    centroid_new = (int(x_average), int(y_average))
-
-    return centroid_new
-
-
 # Create a session to send and receive messages from a running OD4Session;
 # Replay mode: CID = 253
 # Live mode: CID = 112
@@ -109,10 +90,6 @@ keySemCondition = sysv_ipc.ftok(name, 3, True)
 shm = sysv_ipc.SharedMemory(keySharedMemory)
 mutex = sysv_ipc.Semaphore(keySemCondition)
 cond = sysv_ipc.Semaphore(keySemCondition)
-
-MAX_LEN_HISTORY_TO_CONSIDER = 10
-centroids_history_b = []
-centroids_history_y = []
 
 ################################################################################
 # Main loop to process the next image frame coming in.
@@ -161,18 +138,12 @@ while True:
     contours_y, xs_center_y, ys_center_y = get_contours(thresh, type='y')
 
     center_mid_point_b = None
-    center_mid_point_new_b = None
     if len(xs_center_b) > 0 and len(ys_center_b) > 0:
         center_mid_point_b = weighted_mean_centers(Y_WEIGHTING, xs_center_b, ys_center_b)
-        centroids_history_b.insert(0, center_mid_point_b)  # to avoid reverse looping in function below
-        center_mid_point_new_b = weigh_centroid_with_history(centroids_history_b, MAX_LEN_HISTORY_TO_CONSIDER)
 
     center_mid_point_y = None
-    center_mid_point_new_y = None
     if len(xs_center_y) > 0 and len(ys_center_y) > 0:
         center_mid_point_y = weighted_mean_centers(Y_WEIGHTING, xs_center_y, ys_center_y)
-        centroids_history_y.insert(0, center_mid_point_y)  # to avoid reverse looping in function below
-        center_mid_point_new_y = weigh_centroid_with_history(centroids_history_y, MAX_LEN_HISTORY_TO_CONSIDER)
 
     if iii >= 30:
         gg = 5
@@ -191,21 +162,18 @@ while True:
     opp = int(sign * np.sqrt(hyp**2 - HEIGHT **2))
     # print("opp: " + str(opp))
 
-    # cv2.line(img, pt1=[x_mid, y_lo], pt2=[x_mid + opp, y_hi], color=(0, 0, 255), thickness=5)
+    cv2.line(img, pt1=[x_mid, y_lo], pt2=[x_mid + opp, y_hi], color=(0, 0, 255), thickness=5)
     # # ==============================================
 
-    if center_mid_point_b is not None and center_mid_point_new_b is not None:
-        cv2.circle(img, center_mid_point_b, radius=20, color=(200, 100, 100), thickness=10)
-        cv2.circle(img, center_mid_point_new_b, radius=20, color=(255, 0, 0), thickness=10)
+    if center_mid_point_b is not None:
+        cv2.circle(img, center_mid_point_b, radius=20, color=(255, 0, 0), thickness=10)
 
-    if center_mid_point_y is not None and center_mid_point_new_y is not None:
-        cv2.circle(img, center_mid_point_y, radius=20, color=(50, 100, 100), thickness=10)
-        cv2.circle(img, center_mid_point_new_y, radius=20, color=(0, 255, 255), thickness=10)
+    if center_mid_point_y is not None:
+        cv2.circle(img, center_mid_point_y, radius=20, color=(0, 255, 255), thickness=10)
 
     print("C b: " + str(len(contours_b['contours_poly'])) +
           "   C y: " + str(len(contours_y['contours_poly'])) +
-          "    center_mid_point_b: " + str(center_mid_point_b) +
-          "    center_mid_point_new_b: " + str(center_mid_point_new_b))
+          "    center: " + str(center_mid_point_b))
     cv2.imshow("drawing", img)
 
     cv2.waitKey(2)
