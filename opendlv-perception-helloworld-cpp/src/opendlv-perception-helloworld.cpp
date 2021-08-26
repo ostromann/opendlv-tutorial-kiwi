@@ -176,6 +176,8 @@ int32_t main(int32_t argc, char **argv) {
         cv::Scalar hsvHiBlue = toScalar(tokenize(commandlineArguments["bhigh"]));
         const uint32_t NERODE{static_cast<uint32_t>(std::stoi(commandlineArguments["nerode"]))};
         const uint32_t NDILATE{static_cast<uint32_t>(std::stoi(commandlineArguments["ndilate"]))};
+        const uint32_t MAX_CIRCLE_SIZE{static_cast<uint32_t>(std::stoi(commandlineArguments["max_circle_size"]))};
+        const uint32_t MIN_CIRCLE_SIZE{static_cast<uint32_t>(std::stoi(commandlineArguments["min_circle_size"]))};
 
 
         // For monitoring execution time
