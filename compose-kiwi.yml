@@ -10,7 +10,7 @@ services:
     ipc: "host"
     volumes:
       - /tmp:/tmp
-    command: "--cid=111 --freq=10"
+    command: "--cid=111 --freq=10 --verbose"
   perception:
     image: kiwi-perception
     build:
@@ -22,4 +22,7 @@ services:
       - /tmp:/tmp
     environment:
       - DISPLAY=${DISPLAY}
-    command: "--cid=111 --name=img.argb --width=1280 --height=640 --verbose"
+    command: "--cid=111 --name=img.argb --width=1280 --height=720 --verbose
+    --ylow=15,50,50 --yhigh=40,255,255 --blow=110,50,50 --bhigh=130,255,255
+    --nerode=5 --ndilate=5 --crop_width=1200 --crop_height=350 --x_distance=150
+    --max_circle_size=60 --min_circle_size=10"
