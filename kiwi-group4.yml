@@ -11,7 +11,7 @@ services:
     image: opendlv.io/group4-perception:v0.0.3
     network_mode: "host"
     ipc: "host"
-    command: "--cid=140 --name=img.argb --width=1280 --height=720 --verbose
+    command: "--cid=140 --name=img.argb --width=1280 --height=720
     --ylow=15,50,50 --yhigh=40,255,255 --blow=110,50,50 --bhigh=130,255,255
     --nerode=5 --ndilate=5 --crop_width=1200 --crop_height=300 --x_distance=200
     --max_circle_size=60 --min_circle_size=10 --blue_thresh=100 --yellow_thresh=500"
