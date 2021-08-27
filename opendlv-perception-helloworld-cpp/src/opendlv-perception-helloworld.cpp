@@ -42,7 +42,7 @@ cv::Mat dilate_erode(cv::Mat img, uint32_t ndilate, uint32_t nerode) {
     return erode;
 }
 
-cv::Mat drawContours(cv::Mat img, std::vector<std::vector<cv::Point>> contours, cv::Scalar color) {
+cv::Mat drawContours(cv::Mat img, std::vector<std::vector<cv::Point>> contours, cv::Scalar color, float MIN_CIRCLE_SIZE, float MAX_CIRCLE_SIZE) {
     std::vector<std::vector<cv::Point>> contours_poly(contours.size());
     std::vector<cv::Rect> boundRect(contours.size());
     std::vector<cv::Point2f>centers(contours.size());
@@ -57,16 +57,17 @@ cv::Mat drawContours(cv::Mat img, std::vector<std::vector<cv::Point>> contours, 
     for( size_t i = 0; i< contours.size(); i++ )
     {
         cv::drawContours( img, contours_poly, (int)i, color );
-        cv::rectangle( img, boundRect[i].tl(), boundRect[i].br(), color, 2 );
-        cv::circle( img, centers[i], (int)radius[i], color, 2 );
+        if (radius[i] > MIN_CIRCLE_SIZE && radius[i] < MAX_CIRCLE_SIZE) {
+          cv::circle( img, centers[i], (int)radius[i], color, 2 );
+        }
     }
 
     return img;
 }
 
-cv::Point2f ij2xy (cv::Point2f pt) {
+cv::Point2f ij2xy (cv::Point2f pt, uint32_t scaled_width, uint32_t scaled_height) {
     // TODO: make adaptive - use CROP_WIDTH and CROP_HEIGHT
-    cv::Point2f origin(300.0 ,210.0);
+    cv::Point2f origin(scaled_width/2 ,scaled_height);
     cv::Point2f xyPt(pt.x - origin.x, origin.y - pt.y);
 
 
@@ -331,16 +332,11 @@ int32_t main(int32_t argc, char **argv) {
                 std::vector<std::vector<cv::Point>> contoursYellow;
                 cv::findContours(cannyYellow, contoursYellow, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
 
-                // draw contours onto image
-                drawContours(crop_img, contoursYellow, cv::Scalar(0,255,255));
 
 
                 //---- contours of Blue Cones
                 std::vector<std::vector<cv::Point>> contoursBlue;
                 cv::findContours(cannyBlue, contoursBlue, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
-
-                // draw contours onto image
-                drawContours(crop_img, contoursBlue, cv::Scalar(255,0,0));
 
                 // -------- Compute middle point------------
                 // compute mean of blue cones
@@ -363,32 +359,14 @@ int32_t main(int32_t argc, char **argv) {
                 cv::Point2f midpoint;
                 midpoint = getMidpoint(meanBlue, meanYellow);
 
-
-                // Draw line from bottom center to midpoint
-
-                cv::line(crop_img, cv::Point2d(scaled_width/2, scaled_height),
-                  midpoint, cv::Scalar(255, 255, 0), 3);
-
-
                 // Project midpoint onto fixed-distance horizontal line
                 // midpoint.y corresponds to x-distance in local frame!!!
                 midpoint.y = scaled_height - scaled_xdistance;
 
-                // Draw line from bottom center to projected midpoint
-                cv::line(crop_img, cv::Point2d(scaled_width/2, scaled_height),
-                  midpoint, cv::Scalar(0, 0, 255), 5);
-                // Draw horizontal line
-                cv::line(crop_img, cv::Point2d(0, scaled_height-scaled_xdistance),
-                  cv::Point2d(scaled_width, scaled_height-scaled_xdistance),
-                  cv::Scalar(0, 0, 0), 1);
-
                 // Calculate Angle
                 // midpoint.x corresponds to y-distance in local frame!!!
-
-                float angle = atan(ij2xy(midpoint).x/scaled_xdistance);
+                float angle = atan(ij2xy(midpoint, scaled_width, scaled_height).x/scaled_xdistance);
                 std::string str(std::to_string(angle));
-                cv::putText(crop_img,str,cv::Point(scaled_width/2, scaled_height-scaled_xdistance),
-                  cv::FONT_HERSHEY_DUPLEX,1,cv::Scalar(0,0,255),2,false);
 
 
                 // -------- Compute middle point end------------
@@ -396,28 +374,42 @@ int32_t main(int32_t argc, char **argv) {
                 auto t2 = high_resolution_clock::now();
                 // Display image.
                 if (VERBOSE) {
+                    // Draw line from bottom center to midpoint
+                    cv::line(crop_img, cv::Point2d(scaled_width/2, scaled_height),
+                      midpoint, cv::Scalar(255, 255, 0), 3);
+                    // Draw line from bottom center to projected midpoint
+                    cv::line(crop_img, cv::Point2d(scaled_width/2, scaled_height),
+                      midpoint, cv::Scalar(0, 0, 255), 5);
+                    // Draw horizontal line
+                    cv::line(crop_img, cv::Point2d(0, scaled_height-scaled_xdistance),
+                      cv::Point2d(scaled_width, scaled_height-scaled_xdistance),
+                      cv::Scalar(0, 0, 0), 1);
+                    drawContours(crop_img, contoursYellow, cv::Scalar(0,255,255), MIN_CIRCLE_SIZE, MAX_CIRCLE_SIZE);
+                    drawContours(crop_img, contoursBlue, cv::Scalar(255,0,0), MIN_CIRCLE_SIZE, MAX_CIRCLE_SIZE);
+                    cv::putText(crop_img,str,cv::Point(scaled_width/2, scaled_height-scaled_xdistance),
+                      cv::FONT_HERSHEY_DUPLEX,1,cv::Scalar(0,0,255),2,false);
                     // Print coordinates of yellow contours
                     if (contoursYellow.size() > 0){
                         std::cout << "Yellow contours!" << std::endl;
-                        for ( size_t i = 0; i < contoursYellow.size(); i++)
-                        {
-                            std::cout << "ij: " << getContourCoordinates(contoursYellow[i]) << " xy: "<< ij2xy(getContourCoordinates(contoursYellow[i])) << std::endl;
-                        }
+                        // for ( size_t i = 0; i < contoursYellow.size(); i++)
+                        // {
+                        //     std::cout << "ij: " << getContourCoordinates(contoursYellow[i]) << " xy: "<< ij2xy(getContourCoordinates(contoursYellow[i])) << std::endl;
+                        // }
                     }
 
                     // Print coordinates of yellow contours
                     if (contoursBlue.size() > 0){
                         std::cout << "Blue contours!" << std::endl;
-                        for ( size_t i = 0; i < contoursBlue.size(); i++)
-                        {
-                            std::cout << "ij: " << getContourCoordinates(contoursBlue[i]) << " xy: "<< ij2xy(getContourCoordinates(contoursBlue[i])) << std::endl;
-                        }
+                        // for ( size_t i = 0; i < contoursBlue.size(); i++)
+                        // {
+                        //     std::cout << "ij: " << getContourCoordinates(contoursBlue[i]) << " xy: "<< ij2xy(getContourCoordinates(contoursBlue[i])) << std::endl;
+                        // }
                     }
 
                     // Print coordinates of mean points
                     std::cout<< "mean Yellow: " << meanYellow << std::endl;
                     std::cout<< "mean Blue: " << meanBlue << std::endl;
-                    std::cout<< "midpoint: " << midpoint << " xy:" <<  ij2xy(midpoint) << std::endl;
+                    std::cout<< "midpoint: " << midpoint << " xy:" <<  ij2xy(midpoint, scaled_width, scaled_height) << std::endl;
                     std::cout << "angle: " << angle << std::endl;
 
                     // Display image
