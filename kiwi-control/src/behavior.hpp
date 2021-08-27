@@ -31,7 +31,7 @@ class Behavior {
 
  public:
   Behavior() noexcept;
-  Behavior(float, float, float, float);
+  Behavior(float, float, float, float, float);
   ~Behavior() = default;
 
  public:
@@ -44,6 +44,7 @@ class Behavior {
   void setAngleReading(opendlv::proxy::AngleReading const &) noexcept;
   void step() noexcept;
   float m_steeringGain;
+  float m_steeringDeadZone;
   float m_maxSteeringAngle;
   float m_defaultPedalPosition;
   float m_maxPedalPosition;

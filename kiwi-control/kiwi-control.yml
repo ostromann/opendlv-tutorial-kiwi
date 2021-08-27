@@ -10,4 +10,4 @@ services:
     ipc: "host"
     volumes:
       - /tmp:/tmp
-    command: "--cid=111 --freq=10 --verbose"
+    command: "--cid=111 --freq=30 --verbose --steering_gain=1.0 --steering_deadzone=0.05  --max_steering_angle=0.52 --default_pedal_position=0.09 --max_pedal_position=0.12"

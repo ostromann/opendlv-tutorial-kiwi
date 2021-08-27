@@ -20,6 +20,7 @@
 
 Behavior::Behavior() noexcept:
   m_steeringGain(0.5f),
+  m_steeringDeadZone(0.05f),
   m_maxSteeringAngle(0.2f),
   m_defaultPedalPosition(0.09f),
   m_maxPedalPosition(0.12f),
@@ -40,12 +41,13 @@ Behavior::Behavior() noexcept:
 {
 }
 
-Behavior::Behavior(float maxSteer, float defaultPedal, float maxPedal, float steerGain) :
+Behavior::Behavior(float maxSteer, float defaultPedal, float maxPedal, float steerGain, float steeringDeadZone) :
   Behavior::Behavior() {
   m_maxSteeringAngle = maxSteer;
   m_defaultPedalPosition = defaultPedal;
   m_maxPedalPosition = maxPedal;
   m_steeringGain = steerGain;
+  m_steeringDeadZone = steeringDeadZone;
 }
 
 opendlv::proxy::GroundSteeringRequest Behavior::getGroundSteeringAngle() noexcept
@@ -116,7 +118,7 @@ void Behavior::step() noexcept
   angle = angle * -1;
 
   float pedalPosition = 0.2f;
-  float groundSteeringAngle = 0.3f;
+  float groundSteeringAngle = 0.0f;
 
 
   //---- own control implementation ----
@@ -125,18 +127,33 @@ void Behavior::step() noexcept
   // float steeringGain = 0.5f;
 
   //TODO: Try to implement a deadzone for small angles
-  groundSteeringAngle = m_steeringGain * angle;
+  // groundSteeringAngle = m_steeringGain * angle;
+  // if (groundSteeringAngle > m_maxSteeringAngle) {
+  //   groundSteeringAngle = m_maxSteeringAngle ;
+  // } else if (groundSteeringAngle < -m_maxSteeringAngle) {
+  //   groundSteeringAngle = -m_maxSteeringAngle;
+  // }
+
+  // Steering control
+  // slightly advanced steering control with deadzone and quadratic relationship to aimpoint angle
+  if (angle > 0) {
+    if (angle > m_steeringDeadZone) {
+      groundSteeringAngle = m_steeringGain * static_cast<float> (std::pow((angle - m_steeringDeadZone),2));
+    }
+  } else if (angle < 0) {
+    if (angle < -m_steeringDeadZone) {
+      groundSteeringAngle = m_steeringGain * -static_cast<float> (std::pow((angle - m_steeringDeadZone),2));
+    }
+  }
+
+  // Steering limiter
   if (groundSteeringAngle > m_maxSteeringAngle) {
     groundSteeringAngle = m_maxSteeringAngle ;
   } else if (groundSteeringAngle < -m_maxSteeringAngle) {
     groundSteeringAngle = -m_maxSteeringAngle;
   }
 
-  //TODO: Use as command line arguments
-  // float defaultPedalPosition = 0.09f;
-  // float maxPedalPosition = 0.12f;
-
-  // Simple Steering loop
+  // Simple Longitudinal Control
   pedalPosition = m_maxPedalPosition - (m_maxPedalPosition - m_defaultPedalPosition) * (std::abs(groundSteeringAngle) / m_maxSteeringAngle);
 
   if (pedalPosition > m_maxPedalPosition) {
