@@ -24,6 +24,7 @@ Behavior::Behavior() noexcept:
   m_maxSteeringAngle(0.2f),
   m_defaultPedalPosition(0.09f),
   m_maxPedalPosition(0.12f),
+  m_speedGain(1.0f),
   m_frontUltrasonicReading{},
   m_rearUltrasonicReading{},
   m_leftIrReading{},
@@ -41,13 +42,14 @@ Behavior::Behavior() noexcept:
 {
 }
 
-Behavior::Behavior(float maxSteer, float defaultPedal, float maxPedal, float steerGain, float steeringDeadZone) :
+Behavior::Behavior(float maxSteer, float defaultPedal, float maxPedal, float steerGain, float steeringDeadZone, float speedGain) :
   Behavior::Behavior() {
   m_maxSteeringAngle = maxSteer;
   m_defaultPedalPosition = defaultPedal;
   m_maxPedalPosition = maxPedal;
   m_steeringGain = steerGain;
   m_steeringDeadZone = steeringDeadZone;
+  m_speedGain = speedGain;
 }
 
 opendlv::proxy::GroundSteeringRequest Behavior::getGroundSteeringAngle() noexcept
@@ -154,7 +156,7 @@ void Behavior::step() noexcept
   }
 
   // Simple Longitudinal Control
-  pedalPosition = m_maxPedalPosition - (m_maxPedalPosition - m_defaultPedalPosition) * (std::abs(groundSteeringAngle) / m_maxSteeringAngle);
+  pedalPosition = m_maxPedalPosition - m_speedGain * (m_maxPedalPosition - m_defaultPedalPosition) * (std::abs(groundSteeringAngle) / m_maxSteeringAngle);
 
   if (pedalPosition > m_maxPedalPosition) {
     pedalPosition = m_maxPedalPosition;

@@ -8,10 +8,8 @@ services:
       dockerfile: Dockerfile.amd64
     network_mode: "host"
     ipc: "host"
-    volumes:
-      - /tmp:/tmp
-    command: "--cid=111 --freq=10 --verbose --steering_gain=0.2 --max_steering_angle=0.5
-    --default_pedal_position=0.09 --max_pedal_position=0.12"
+    command: "--cid=111 --freq=10 --verbose --steering_gain=0.17 --max_steering_angle=0.5
+    --default_pedal_position=0.09 --max_pedal_position=0.2 --steering_deadzone=0.05 --speed_gain=2.0"
   perception:
     image: kiwi-perception
     build:
@@ -25,5 +23,5 @@ services:
       - DISPLAY=${DISPLAY}
     command: "--cid=111 --name=video0.argb --width=1280 --height=720 --verbose
     --ylow=15,50,50 --yhigh=40,255,255 --blow=110,50,50 --bhigh=130,255,255
-    --nerode=5 --ndilate=5 --crop_width=1200 --crop_height=300 --x_distance=150
-    --max_circle_size=60 --min_circle_size=10"
+    --nerode=5 --ndilate=5 --crop_width=1200 --crop_height=300 --x_distance=200
+    --max_circle_size=60 --min_circle_size=10 --blue_thresh=0 --yellow_thresh=600"

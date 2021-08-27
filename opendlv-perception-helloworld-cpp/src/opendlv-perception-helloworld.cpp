@@ -85,7 +85,7 @@ cv::Point2f getContourCoordinates(std::vector<cv::Point> contour) {
     return center;
 }
 
-std::vector<cv::Point2f> getAllContourCoordinates(std::vector<std::vector<cv::Point>> contours) {
+std::vector<cv::Point2f> getAllContourCoordinates(std::vector<std::vector<cv::Point>> contours, float MIN_CIRCLE_SIZE, float MAX_CIRCLE_SIZE) {
     std::vector<std::vector<cv::Point>> contours_poly(contours.size());
     std::vector<cv::Point2f>  centers(contours.size());
     std::vector<float>radius(contours.size());
@@ -96,17 +96,44 @@ std::vector<cv::Point2f> getAllContourCoordinates(std::vector<std::vector<cv::Po
         cv::minEnclosingCircle(contours_poly[i], centers[i], radius[i]);
     }
 
-    return centers;
+    std::vector<cv::Point2f> result;
+    for (size_t i=0; i< centers.size(); i++) {
+      if (MIN_CIRCLE_SIZE < radius[i] && radius[i] < MAX_CIRCLE_SIZE) {
+        result.push_back(centers[i]);
+      }
+    }
+    if (result.size() == 0) {
+      result = centers;
+    }
+
+    return result;
 }
 
-cv::Point2f getMeanCoordinatesOfContours(std::vector<std::vector<cv::Point>> contours) {
+cv::Point2f getMeanCoordinatesOfContours(std::vector<std::vector<cv::Point>> contours, float MIN_CIRCLE_SIZE, float MAX_CIRCLE_SIZE, bool isBlue, uint32_t BLUE_THRESH, uint32_t YELLOW_THRESH) {
     /*
     Return coordinates of mean of all contours in ij-system.
     */
     std::vector<cv::Point2f> points;
-    points = getAllContourCoordinates(contours);
+    points = getAllContourCoordinates(contours, MIN_CIRCLE_SIZE, MAX_CIRCLE_SIZE);
+    std::vector<cv::Point2f> valid_points;
+    if (isBlue) {
+      for (size_t i = 0; i<points.size(); i++) {
+        if (BLUE_THRESH < points[i].x ) {
+          valid_points.push_back(points[i]);
+        }
+      }
+    } else {
+      for (size_t i =0; i<points.size(); i++) {
+        if ( points[i].x < YELLOW_THRESH) {
+          valid_points.push_back(points[i]);
+        }
+      }
+    }
+    if (0 == valid_points.size()) {
+      valid_points = points;
+    }
     cv::Mat mean_;
-    cv::reduce(points, mean_, 01, CV_REDUCE_AVG);
+    cv::reduce(valid_points, mean_, 01, CV_REDUCE_AVG);
     return cv::Point2f(mean_.at<float>(0,0), mean_.at<float>(0,1));
 }
 
@@ -178,6 +205,8 @@ int32_t main(int32_t argc, char **argv) {
         const uint32_t NDILATE{static_cast<uint32_t>(std::stoi(commandlineArguments["ndilate"]))};
         const uint32_t MAX_CIRCLE_SIZE{static_cast<uint32_t>(std::stoi(commandlineArguments["max_circle_size"]))};
         const uint32_t MIN_CIRCLE_SIZE{static_cast<uint32_t>(std::stoi(commandlineArguments["min_circle_size"]))};
+        const uint32_t BLUE_THRESH{static_cast<uint32_t>(std::stoi(commandlineArguments["blue_thresh"]))};
+        const uint32_t YELLOW_THRESH{static_cast<uint32_t>(std::stoi(commandlineArguments["yellow_thresh"]))};
 
 
         // For monitoring execution time
@@ -252,10 +281,13 @@ int32_t main(int32_t argc, char **argv) {
                 int cropped_height{crop_img.rows};
                 // Scale image to half resolution
                 cv::resize(crop_img, crop_img, cv::Size(cropped_width/2, cropped_height/2), cv::INTER_LINEAR);
+                int scaled_width{crop_img.cols};
+                int scaled_height{crop_img.rows};
+                int scaled_xdistance{X_DISTANCE/2};
 
                 // Drawing an ellipse over vehicle parts visible in camera feed
-                cv::ellipse(crop_img, cv::Point(crop_img.cols/2, crop_img.rows),
-                  cv::Size(crop_img.cols*4/10, crop_img.rows*2/5), 0, 0, 360,
+                cv::ellipse(crop_img, cv::Point(scaled_width/2, scaled_height),
+                  cv::Size(scaled_width*4/10, scaled_height*2/5), 0, 0, 360,
                   cv::Scalar(0, 0, 0),-1, cv::LINE_AA);
 
 
@@ -314,17 +346,17 @@ int32_t main(int32_t argc, char **argv) {
                 // compute mean of blue cones
                 cv::Point2f meanBlue;
                 if (contoursBlue.size() > 0) {
-                    meanBlue = getMeanCoordinatesOfContours(contoursBlue);
+                    meanBlue = getMeanCoordinatesOfContours(contoursBlue, MIN_CIRCLE_SIZE, MAX_CIRCLE_SIZE, true, BLUE_THRESH, YELLOW_THRESH);
                 } else {
-                    meanBlue = cv::Point2f(300, 150);
+                    meanBlue = cv::Point2f(scaled_width, scaled_xdistance);
                 }
 
                 // // compute mean of yellow conescv::Point2f meanYellow;
                 cv::Point2f meanYellow;
                 if (contoursYellow.size() > 0) {
-                    meanYellow = getMeanCoordinatesOfContours(contoursYellow);
+                    meanYellow = getMeanCoordinatesOfContours(contoursYellow, MIN_CIRCLE_SIZE, MAX_CIRCLE_SIZE, false, BLUE_THRESH, YELLOW_THRESH);
                 } else {
-                    meanYellow = cv::Point2f(-300, 150);
+                    meanYellow = cv::Point2f(0, scaled_xdistance);
                 }
 
                 // Compute midpoint (Between mean of yellow cones and mean of blue cones)
@@ -334,26 +366,29 @@ int32_t main(int32_t argc, char **argv) {
 
                 // Draw line from bottom center to midpoint
 
-                cv::line(crop_img, cv::Point2d(300, CROP_HEIGHT), midpoint, cv::Scalar(255, 255, 0), 3);
+                cv::line(crop_img, cv::Point2d(scaled_width/2, scaled_height),
+                  midpoint, cv::Scalar(255, 255, 0), 3);
 
 
                 // Project midpoint onto fixed-distance horizontal line
                 // midpoint.y corresponds to x-distance in local frame!!!
-                midpoint.y = CROP_HEIGHT - X_DISTANCE;
+                midpoint.y = scaled_height - scaled_xdistance;
 
                 // Draw line from bottom center to projected midpoint
-                cv::line(crop_img, cv::Point2d(300, CROP_HEIGHT), midpoint, cv::Scalar(0, 0, 255), 5);
+                cv::line(crop_img, cv::Point2d(scaled_width/2, scaled_height),
+                  midpoint, cv::Scalar(0, 0, 255), 5);
                 // Draw horizontal line
-                cv::line(crop_img, cv::Point2d(0, CROP_HEIGHT-X_DISTANCE), cv::Point2d(CROP_WIDTH, CROP_HEIGHT-X_DISTANCE), cv::Scalar(0, 0, 0), 1);
+                cv::line(crop_img, cv::Point2d(0, scaled_height-scaled_xdistance),
+                  cv::Point2d(scaled_width, scaled_height-scaled_xdistance),
+                  cv::Scalar(0, 0, 0), 1);
 
                 // Calculate Angle
                 // midpoint.x corresponds to y-distance in local frame!!!
 
-                float angle = atan(ij2xy(midpoint).x/X_DISTANCE);
+                float angle = atan(ij2xy(midpoint).x/scaled_xdistance);
                 std::string str(std::to_string(angle));
-                cv::putText(crop_img,str,cv::Point(CROP_WIDTH/2,CROP_HEIGHT-X_DISTANCE),cv::FONT_HERSHEY_DUPLEX,1,cv::Scalar(0,0,255),2,false);
-
-                cv::line(crop_img, cv::Point2d(300, 210), midpoint, cv::Scalar(0, 0, 255), 5);
+                cv::putText(crop_img,str,cv::Point(scaled_width/2, scaled_height-scaled_xdistance),
+                  cv::FONT_HERSHEY_DUPLEX,1,cv::Scalar(0,0,255),2,false);
 
 
                 // -------- Compute middle point end------------

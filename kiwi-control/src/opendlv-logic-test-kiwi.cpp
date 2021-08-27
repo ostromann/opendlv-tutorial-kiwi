@@ -39,8 +39,9 @@ int32_t main(int32_t argc, char **argv) {
     float const MAX_STEERING_ANGLE{std::stof(commandlineArguments["max_steering_angle"])};
     float const DEFAULT_PEDAL_POSITION{std::stof(commandlineArguments["default_pedal_position"])};
     float const MAX_PEDAL_POSITION{std::stof(commandlineArguments["max_pedal_position"])};
+    float const SPEED_GAIN{std::stof(commandlineArguments["speed_gain"])};
 
-    Behavior behavior(MAX_STEERING_ANGLE, DEFAULT_PEDAL_POSITION, MAX_PEDAL_POSITION, STEERING_GAIN, STEERING_DEADZONE);
+    Behavior behavior(MAX_STEERING_ANGLE, DEFAULT_PEDAL_POSITION, MAX_PEDAL_POSITION, STEERING_GAIN, STEERING_DEADZONE, SPEED_GAIN);
 
     auto onDistanceReading{[&behavior](cluon::data::Envelope &&envelope)
       {

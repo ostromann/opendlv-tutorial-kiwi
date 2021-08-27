@@ -31,7 +31,7 @@ class Behavior {
 
  public:
   Behavior() noexcept;
-  Behavior(float, float, float, float, float);
+  Behavior(float, float, float, float, float, float);
   ~Behavior() = default;
 
  public:
@@ -48,6 +48,7 @@ class Behavior {
   float m_maxSteeringAngle;
   float m_defaultPedalPosition;
   float m_maxPedalPosition;
+  float m_speedGain;
 
  private:
   double convertIrVoltageToDistance(float) const noexcept;
