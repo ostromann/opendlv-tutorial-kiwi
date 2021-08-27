@@ -5,13 +5,15 @@ services:
     image: opendlv.io/group4-control:v0.0.3
     network_mode: "host"
     ipc: "host"
-    command: "--cid=140 --freq=10 --verbose --steering_gain=0.17 --max_steering_angle=0.5
-    --default_pedal_position=0.09 --max_pedal_position=0.2 --steering_deadzone=0.05 --speed_gain=2.0"
+    command: "--cid=140 --freq=10 --verbose --steering_gain=0.21 --max_steering_angle=0.5
+    --default_pedal_position=0.11 --max_pedal_position=0.1625 --steering_deadzone=0.14 --speed_gain=1.0"
   perception:
     image: opendlv.io/group4-perception:v0.0.3
     network_mode: "host"
+    volumes:
+      - /tmp:/tmp
     ipc: "host"
     command: "--cid=140 --name=img.argb --width=1280 --height=720
-    --ylow=15,50,50 --yhigh=40,255,255 --blow=110,50,50 --bhigh=130,255,255
-    --nerode=5 --ndilate=5 --crop_width=1200 --crop_height=300 --x_distance=200
-    --max_circle_size=60 --min_circle_size=10 --blue_thresh=100 --yellow_thresh=500"
+    --ylow=15,50,50 --yhigh=40,255,255 --blow=145,30,20 --bhigh=175,255,255
+    --nerode=5 --ndilate=5 --crop_width=1200 --crop_height=310 --x_distance=210
+    --max_circle_size=25 --min_circle_size=4 --blue_thresh=100 --yellow_thresh=500"
