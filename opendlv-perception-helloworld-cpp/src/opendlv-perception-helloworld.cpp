@@ -283,7 +283,7 @@ int32_t main(int32_t argc, char **argv) {
                 cv::resize(crop_img, crop_img, cv::Size(cropped_width/2, cropped_height/2), cv::INTER_LINEAR);
                 int scaled_width{crop_img.cols};
                 int scaled_height{crop_img.rows};
-                int scaled_xdistance{X_DISTANCE/2};
+                uint32_t scaled_xdistance{X_DISTANCE/2};
 
                 // Drawing an ellipse over vehicle parts visible in camera feed
                 cv::ellipse(crop_img, cv::Point(scaled_width/2, scaled_height),
