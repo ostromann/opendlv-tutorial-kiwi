@@ -42,6 +42,34 @@ cv::Mat dilate_erode(cv::Mat img, uint32_t ndilate, uint32_t nerode) {
     return erode;
 }
 
+cv::Mat drawControlSignal(float angle, cv::Mat img) {
+    angle = angle * -1;
+
+    float groundSteeringAngle = 0.0f;
+    //Note, this is not the original control signal, just a copy of it!
+      // Steering control
+    // slightly advanced steering control with deadzone and quadratic relationship to aimpoint angle
+    if (angle > 0) {
+      if (angle > 0.2) {
+        groundSteeringAngle = 0.2 * static_cast<float> (std::pow((angle - 0.2),2));
+      }
+    } else if (angle < 0) {
+      if (angle < -0.2) {
+        groundSteeringAngle = 0.2 * -static_cast<float> (std::pow((angle - 0.2),2));
+      }
+    }
+
+
+
+    // Draw Control signal
+    std::string str(std::to_string(groundSteeringAngle));
+    
+    cv::putText(img,str,cv::Point(0, 100),
+      cv::FONT_HERSHEY_DUPLEX,1,cv::Scalar(0,0,255),2,false);
+
+    return img;
+}
+
 cv::Mat drawContours(cv::Mat img, std::vector<std::vector<cv::Point>> contours, cv::Scalar color, float MIN_CIRCLE_SIZE, float MAX_CIRCLE_SIZE) {
     std::vector<std::vector<cv::Point>> contours_poly(contours.size());
     std::vector<cv::Rect> boundRect(contours.size());
@@ -281,7 +309,7 @@ int32_t main(int32_t argc, char **argv) {
                 int cropped_width{crop_img.cols};
                 int cropped_height{crop_img.rows};
                 // Scale image to half resolution
-                cv::resize(crop_img, crop_img, cv::Size(cropped_width/2, cropped_height/2), cv::INTER_LINEAR);
+                // cv::resize(crop_img, crop_img, cv::Size(cropped_width/2, cropped_height/2), cv::INTER_LINEAR);
                 int scaled_width{crop_img.cols};
                 int scaled_height{crop_img.rows};
                 uint32_t scaled_xdistance{X_DISTANCE/2};
@@ -374,36 +402,120 @@ int32_t main(int32_t argc, char **argv) {
                 auto t2 = high_resolution_clock::now();
                 // Display image.
                 if (VERBOSE) {
-                    // Draw line from bottom center to midpoint
-                    cv::line(crop_img, cv::Point2d(scaled_width/2, scaled_height),
-                      midpoint, cv::Scalar(255, 255, 0), 3);
+
+
+                                      // ---- fake control block starts-----
+                    float angleReading = angle;
+                    angleReading = angleReading;
+
+                    float pedalPosition = 0.2f;
+                    float groundSteeringAngle = 0.0f;
+
+                    float steeringGain = 0.21f;
+                    float maxSteeringAngle = 0.5f;
+                    float defaultPedalPosition = 0.11f;
+                    float maxPedalPosition = 0.1625f;
+                    float steeringDeadZone = 0.14f;
+                    float speedGain = 1.0f;
+                    //--max_steering_angle=0.5 --default_pedal_position=0.11 --max_pedal_position=0.1625 --steering_deadzone=0.14 --speed_gain=1.0
+
+
+                    // Steering control
+                    // slightly advanced steering control with deadzone and quadratic relationship to aimpoint angle
+                    if (angleReading > 0) {
+                      if (angleReading > steeringDeadZone) {
+                        groundSteeringAngle = steeringGain * static_cast<float> (std::pow((angleReading - steeringDeadZone),2));
+                      }
+                    } else if (angleReading < 0) {
+                      if (angleReading < -steeringDeadZone) {
+                        groundSteeringAngle = steeringGain * -static_cast<float> (std::pow((angleReading - steeringDeadZone),2));
+                      }
+                    }
+
+                    // Steering limiter
+                    if (groundSteeringAngle > maxSteeringAngle) {
+                      groundSteeringAngle = maxSteeringAngle ;
+                    } else if (groundSteeringAngle < -maxSteeringAngle) {
+                      groundSteeringAngle = -maxSteeringAngle;
+                    }
+
+                    // Simple Longitudinal Control
+                    pedalPosition = maxPedalPosition - speedGain * (maxPedalPosition - defaultPedalPosition) * (std::abs(groundSteeringAngle) / maxSteeringAngle);
+
+                    if (pedalPosition > maxPedalPosition) {
+                      pedalPosition = maxPedalPosition;
+                    }
+                    // ---- fake control block  ends-----
+
+                    // ---- Visualize control signal starts---
+
+                    // Throttle
+                    cv::Point bottom_left = cv::Point(0, scaled_height);
+                    cv::Point top_right = cv::Point(50, scaled_height - (scaled_height *(pedalPosition - defaultPedalPosition) / (maxPedalPosition - defaultPedalPosition)));
+                    
+                    // // alternative vis
+                    // cv::Point bottom_left = cv::Point(scaled_width/2 - 10, scaled_height-20);
+                    // cv::Point top_right = cv::Point(scaled_width/2 + 2, scaled_xdistance - (scaled_xdistance *(pedalPosition - defaultPedalPosition) / (maxPedalPosition - defaultPedalPosition)));
+
+                    cv::Rect r_throttle(bottom_left, top_right);
+                    cv::rectangle(crop_img, r_throttle, cv::Scalar(0, 255, 0), -1);
+
+                    // Steering
+                    // if (groundSteeringAngle < 0) {
+                    
+                    // cv::Point top_left = cv::Point(scaled_width/2, scaled_height-20);
+                    // cv::Point bottom_right = cv::Point(scaled_width/2 + scaled_width * 0.5 * groundSteeringAngle, scaled_height);
+                    cv::Rect r_steer = cv::Rect(cv::Point(scaled_width/2, scaled_height - scaled_xdistance-10), cv::Point(scaled_width/2 + scaled_width * 0.5 * groundSteeringAngle, scaled_height - scaled_xdistance+10));
+                    cv::rectangle(crop_img, r_steer, cv::Scalar(0, 255, 0), -1);
+
+                    cv::Rect r_steer_max = cv::Rect(cv::Point(scaled_width/2 + scaled_width * 0.5 * -maxSteeringAngle, scaled_height - scaled_xdistance-10), cv::Point(scaled_width/2 + scaled_width * 0.5 * maxSteeringAngle, scaled_height - scaled_xdistance+10));
+                    cv::rectangle(crop_img, r_steer_max, cv::Scalar(0, 200, 0));
+
+
+
+
+                    // --- Visualize control signal ends ---
                     // Draw line from bottom center to projected midpoint
                     cv::line(crop_img, cv::Point2d(scaled_width/2, scaled_height),
-                      midpoint, cv::Scalar(0, 0, 255), 5);
+                      midpoint, cv::Scalar(0, 0, 255), 2);
+
+                    // Draw Crosshair at projected midpoint
+                    float ChLength = 10.0; // Crosshair lenght
+                    cv::line(crop_img, cv::Point2d(midpoint.x-ChLength, midpoint.y-ChLength), cv::Point2d(midpoint.x+ChLength, midpoint.y+ChLength), cv::Scalar(0,0,255), 3);
+                    cv::line(crop_img, cv::Point2d(midpoint.x+ChLength, midpoint.y-ChLength), cv::Point2d(midpoint.x-ChLength, midpoint.y+ChLength), cv::Scalar(0,0,255), 3);
+
+                    // Draw Crosshair at projected blue mean
+                    cv::line(crop_img, cv::Point2d(meanBlue.x-ChLength, midpoint.y-ChLength), cv::Point2d(meanBlue.x+ChLength, midpoint.y+ChLength), cv::Scalar(255,0,0), 3);
+                    cv::line(crop_img, cv::Point2d(meanBlue.x+ChLength, midpoint.y-ChLength), cv::Point2d(meanBlue.x-ChLength, midpoint.y+ChLength), cv::Scalar(255,0,0), 3);
+
+                    // Draw Crosshair at projected yellow mean
+                    cv::line(crop_img, cv::Point2d(meanYellow.x-ChLength, midpoint.y-ChLength), cv::Point2d(meanYellow.x+ChLength, midpoint.y+ChLength), cv::Scalar(0,255,255), 3);
+                    cv::line(crop_img, cv::Point2d(meanYellow.x+ChLength, midpoint.y-ChLength), cv::Point2d(meanYellow.x-ChLength, midpoint.y+ChLength), cv::Scalar(0,255,255), 3);
+
+                    // draw control signal
+                    // crop_img = drawControlSignal(angle, crop_img);
+
+
+
+
+
+
                     // Draw horizontal line
                     cv::line(crop_img, cv::Point2d(0, scaled_height-scaled_xdistance),
                       cv::Point2d(scaled_width, scaled_height-scaled_xdistance),
                       cv::Scalar(0, 0, 0), 1);
                     drawContours(crop_img, contoursYellow, cv::Scalar(0,255,255), MIN_CIRCLE_SIZE, MAX_CIRCLE_SIZE);
                     drawContours(crop_img, contoursBlue, cv::Scalar(255,0,0), MIN_CIRCLE_SIZE, MAX_CIRCLE_SIZE);
-                    cv::putText(crop_img,str,cv::Point(scaled_width/2, scaled_height-scaled_xdistance),
-                      cv::FONT_HERSHEY_DUPLEX,1,cv::Scalar(0,0,255),2,false);
-                    // Print coordinates of yellow contours
+                    // cv::putText(crop_img,str,cv::Point(scaled_width/2, scaled_height-scaled_xdistance),
+                    //   cv::FONT_HERSHEY_DUPLEX,1,cv::Scalar(0,0,255),2,false);
+                    // // Print coordinates of yellow contours
                     if (contoursYellow.size() > 0){
                         std::cout << "Yellow contours!" << std::endl;
-                        // for ( size_t i = 0; i < contoursYellow.size(); i++)
-                        // {
-                        //     std::cout << "ij: " << getContourCoordinates(contoursYellow[i]) << " xy: "<< ij2xy(getContourCoordinates(contoursYellow[i])) << std::endl;
-                        // }
                     }
 
                     // Print coordinates of yellow contours
                     if (contoursBlue.size() > 0){
                         std::cout << "Blue contours!" << std::endl;
-                        // for ( size_t i = 0; i < contoursBlue.size(); i++)
-                        // {
-                        //     std::cout << "ij: " << getContourCoordinates(contoursBlue[i]) << " xy: "<< ij2xy(getContourCoordinates(contoursBlue[i])) << std::endl;
-                        // }
                     }
 
                     // Print coordinates of mean points
